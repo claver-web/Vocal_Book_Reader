@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, BookOpen, Layers, Volume2, Gauge, Zap, ArrowRight, SlidersHorizontal, Play, Pause, Rewind, FastForward } from 'lucide-react';
+import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import PDFUploader from '@/components/PDFUploader';
 import SidebarControls from '@/components/SidebarControls';
 import KaraokeDisplay from '@/components/KaraokeDisplay';
@@ -86,6 +87,25 @@ export default function Home() {
                 reader.highContrast ? 'bg-black text-white' : 'bg-gradient-to-br from-[#050b14] via-[#081120] to-[#050b14]'
               }`}
             >
+              <div className="absolute top-6 right-6 z-50">
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <button className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold rounded-full shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform">
+                      Sign In
+                    </button>
+                  </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                  <UserButton 
+                    appearance={{
+                      elements: {
+                        avatarBox: "w-10 h-10 border-2 border-amber-500 shadow-lg"
+                      }
+                    }}
+                  />
+                </SignedIn>
+              </div>
+
               {/* Background glowing gradient orbs */}
               {!reader.highContrast && (
                 <>

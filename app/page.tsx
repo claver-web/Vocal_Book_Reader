@@ -196,7 +196,7 @@ export default function Home() {
                     transition={{ delay: 0.3 }}
                     className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-xl mx-auto font-normal"
                   >
-                    Enjoy multi-column research papers and ebooks with intelligent reading order preservation, word-by-word karaoke highlighting, and natural TTS voice synthesis.
+                    Enjoy multi-column research papers, ebooks, and documents with intelligent reading order preservation, word-by-word karaoke highlighting, and natural TTS voice synthesis.
                   </motion.p>
                 </div>
 

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, RefreshCw, BookOpen, Layers, Sparkles, Flame } from 'lucide-react';
 import { extractTextFromPDF } from '@/lib/pdfParser';
 import { PDFDocumentData } from '@/types';
+import { useAuth } from '@clerk/nextjs';
 
 interface PDFUploaderProps {
   onDocumentLoaded: (data: PDFDocumentData) => void;
@@ -16,6 +17,7 @@ export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUp
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extractionProgress, setExtractionProgress] = useState<string>('');
+  const { userId } = useAuth();
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -48,6 +50,32 @@ export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUp
 
     try {
       const data = await extractTextFromPDF(file, file.name, file.size);
+      
+      if (userId) {
+        setExtractionProgress('Saving to your cloud library...');
+        try {
+          const authRes = await fetch('/api/imagekit/auth');
+          const authData = await authRes.json();
+          
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("publicKey", process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "public_ZUTFW1pg0uZzTrnYSom2foSwpX4=");
+          formData.append("signature", authData.signature);
+          formData.append("expire", authData.expire.toString());
+          formData.append("token", authData.token);
+          formData.append("fileName", file.name);
+          formData.append("folder", `/vocal_reader/${userId}`);
+          formData.append("useUniqueFileName", "false");
+
+          await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+            method: "POST",
+            body: formData
+          });
+        } catch (uploadError) {
+          console.error("Failed to upload to ImageKit:", uploadError);
+        }
+      }
+
       setExtractionProgress('Analysis complete!');
       onDocumentLoaded(data);
     } catch (err: any) {

@@ -23,8 +23,41 @@ export default function Home() {
   const { userId } = useAuth();
 
   // Load library metadata on mount
-  const refreshLibrary = () => {
-    setLibraryBooks(getLibraryMetadata());
+  const refreshLibrary = async () => {
+    const localBooks = getLibraryMetadata();
+    if (userId) {
+      try {
+        const res = await fetch('/api/books');
+        const data = await res.json();
+        if (data.files && Array.isArray(data.files)) {
+          const cloudFiles = data.files.map((f: any) => ({
+            id: f.fileId,
+            name: f.name,
+            size: f.size,
+            pageCount: 0,
+            lastPage: 1,
+            lastSentenceIndex: 0,
+            lastWordIndex: 0,
+            progressPercentage: 0,
+            lastReadAt: new Date(f.createdAt).getTime(),
+            url: f.url
+          }));
+          const merged = [...localBooks];
+          cloudFiles.forEach((cf: any) => {
+            if (!merged.find(b => b.name === cf.name)) {
+              merged.push(cf);
+            }
+          });
+          setLibraryBooks(merged.sort((a, b) => b.lastReadAt - a.lastReadAt));
+        } else {
+          setLibraryBooks(localBooks);
+        }
+      } catch (e) {
+        setLibraryBooks(localBooks);
+      }
+    } else {
+      setLibraryBooks(localBooks);
+    }
   };
 
   useEffect(() => {
@@ -48,7 +81,23 @@ export default function Home() {
   };
 
   const handleResumeBook = async (meta: LibraryBookMetadata) => {
-    const docData = await loadBookFromLibrary(meta.name);
+    let docData = await loadBookFromLibrary(meta.name);
+    
+    // If it's a cloud book and not in local IndexedDB
+    if (!docData && meta.url) {
+      try {
+        const response = await fetch(meta.url);
+        const blob = await response.blob();
+        const file = new File([blob], meta.name, { type: 'application/pdf' });
+        // Assuming extractTextFromPDF is imported in this file. Wait, it's NOT imported in page.tsx.
+        // Let's import it at the top or dynamically import it.
+        const { extractTextFromPDF } = await import('@/lib/pdfParser');
+        docData = await extractTextFromPDF(file, meta.name, blob.size);
+      } catch (e) {
+        console.error('Error downloading and parsing cloud PDF:', e);
+      }
+    }
+
     if (docData) {
       setDocument(docData);
       setTimeout(() => {

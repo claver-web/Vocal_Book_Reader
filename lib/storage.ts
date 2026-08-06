@@ -12,6 +12,7 @@ export interface LibraryBookMetadata {
   lastWordIndex: number;
   progressPercentage: number;
   lastReadAt: number;
+  url?: string;
 }
 
 const DB_NAME = 'VocalReaderDB';

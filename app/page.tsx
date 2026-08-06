@@ -206,7 +206,7 @@ export default function Home() {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <PDFUploader onDocumentLoaded={handleDocumentLoaded} />
+                  <PDFUploader onDocumentLoaded={handleDocumentLoaded} onMultipleUploadsComplete={refreshLibrary} />
                 </motion.div>
 
                 {/* Library History Grid (Step 11 & 13) */}

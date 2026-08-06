@@ -10,10 +10,11 @@ import { useAuth } from '@clerk/nextjs';
 
 interface PDFUploaderProps {
   onDocumentLoaded: (data: PDFDocumentData) => void;
+  onMultipleUploadsComplete?: () => void;
   currentDocument?: PDFDocumentData | null;
 }
 
-export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUploaderProps) {
+export default function PDFUploader({ onDocumentLoaded, onMultipleUploadsComplete, currentDocument }: PDFUploaderProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extractionProgress, setExtractionProgress] = useState<string>('');
@@ -35,7 +36,7 @@ export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUp
       if (rejection.errors[0]?.code === 'file-too-large') {
         setError('File size exceeds the 50MB limit.');
       } else if (rejection.errors[0]?.code === 'file-invalid-type') {
-        setError('Only PDF files are supported. Please upload a valid .pdf file.');
+        setError('Only PDF files are supported. Please upload valid .pdf files.');
       } else {
         setError(rejection.errors[0]?.message || 'Error uploading file.');
       }
@@ -44,19 +45,58 @@ export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUp
 
     if (acceptedFiles.length === 0) return;
 
-    const file = acceptedFiles[0];
-    setIsExtracting(true);
-    setExtractionProgress('Reading PDF structure and extracting text...');
+    if (acceptedFiles.length === 1 || !userId) {
+      const file = acceptedFiles[0];
+      setIsExtracting(true);
+      setExtractionProgress('Reading PDF structure and extracting text...');
 
-    try {
-      const data = await extractTextFromPDF(file, file.name, file.size);
+      try {
+        const data = await extractTextFromPDF(file, file.name, file.size);
+        
+        if (userId) {
+          setExtractionProgress('Saving to your cloud library...');
+          try {
+            const authRes = await fetch('/api/imagekit/auth');
+            const authData = await authRes.json();
+            
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("publicKey", process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "public_ZUTFW1pg0uZzTrnYSom2foSwpX4=");
+            formData.append("signature", authData.signature);
+            formData.append("expire", authData.expire.toString());
+            formData.append("token", authData.token);
+            formData.append("fileName", file.name);
+            formData.append("folder", `/vocal_reader/${userId}`);
+            formData.append("useUniqueFileName", "false");
+
+            await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+              method: "POST",
+              body: formData
+            });
+          } catch (uploadError) {
+            console.error("Failed to upload to ImageKit:", uploadError);
+          }
+        }
+
+        setExtractionProgress('Analysis complete!');
+        onDocumentLoaded(data);
+      } catch (err: any) {
+        console.error('PDF Extraction Error:', err);
+        setError(err?.message || 'Failed to extract text from PDF. The file might be corrupted or password protected.');
+      } finally {
+        setIsExtracting(false);
+        setExtractionProgress('');
+      }
+    } else {
+      // Multiple files upload flow
+      setIsExtracting(true);
+      setExtractionProgress(`Uploading ${acceptedFiles.length} files to your library...`);
       
-      if (userId) {
-        setExtractionProgress('Saving to your cloud library...');
-        try {
-          const authRes = await fetch('/api/imagekit/auth');
-          const authData = await authRes.json();
-          
+      try {
+        const authRes = await fetch('/api/imagekit/auth');
+        const authData = await authRes.json();
+        
+        const uploadPromises = acceptedFiles.map(async (file) => {
           const formData = new FormData();
           formData.append("file", file);
           formData.append("publicKey", process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "public_ZUTFW1pg0uZzTrnYSom2foSwpX4=");
@@ -67,25 +107,26 @@ export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUp
           formData.append("folder", `/vocal_reader/${userId}`);
           formData.append("useUniqueFileName", "false");
 
-          await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+          return fetch("https://upload.imagekit.io/api/v1/files/upload", {
             method: "POST",
             body: formData
           });
-        } catch (uploadError) {
-          console.error("Failed to upload to ImageKit:", uploadError);
-        }
-      }
+        });
 
-      setExtractionProgress('Analysis complete!');
-      onDocumentLoaded(data);
-    } catch (err: any) {
-      console.error('PDF Extraction Error:', err);
-      setError(err?.message || 'Failed to extract text from PDF. The file might be corrupted or password protected.');
-    } finally {
-      setIsExtracting(false);
-      setExtractionProgress('');
+        await Promise.all(uploadPromises);
+        setExtractionProgress('Uploads complete! Refreshing library...');
+        if (onMultipleUploadsComplete) {
+          onMultipleUploadsComplete();
+        }
+      } catch (err) {
+        console.error('Batch Upload Error:', err);
+        setError('Failed to upload some files to your library.');
+      } finally {
+        setIsExtracting(false);
+        setExtractionProgress('');
+      }
     }
-  }, [onDocumentLoaded]);
+  }, [onDocumentLoaded, onMultipleUploadsComplete, userId]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -93,7 +134,7 @@ export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUp
       'application/pdf': ['.pdf'],
     },
     maxSize: 50 * 1024 * 1024, // 50MB
-    multiple: false,
+    multiple: !!userId,
     disabled: isExtracting,
   });
 
@@ -164,10 +205,15 @@ export default function PDFUploader({ onDocumentLoaded, currentDocument }: PDFUp
 
                     <div className="space-y-2">
                       <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white group-hover:text-amber-300 transition-colors">
-                        {isDragActive ? 'Drop your PDF right here!' : 'Drop PDF here, or click to browse'}
+                        {isDragActive 
+                          ? (userId ? 'Drop your PDFs right here!' : 'Drop your PDF right here!') 
+                          : (userId ? 'Drop PDFs here, or click to browse' : 'Drop PDF here, or click to browse')}
                       </h3>
                       <p className="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
-                        Supports multi-column layouts, research papers, and ebooks. Max file size <span className="text-amber-400 font-bold">50MB</span>.
+                        {userId 
+                          ? 'Upload multiple PDFs to build your cloud library. Max file size ' 
+                          : 'Supports multi-column layouts, research papers, and ebooks. Max file size '}
+                        <span className="text-amber-400 font-bold">50MB</span>.
                       </p>
                     </div>
 

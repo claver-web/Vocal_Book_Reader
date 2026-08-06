@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, BookOpen, Layers, Volume2, Gauge, Zap, ArrowRight, SlidersHorizontal, Play, Pause, Rewind, FastForward } from 'lucide-react';
-import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { SignInButton, UserButton, useAuth } from '@clerk/nextjs';
 import PDFUploader from '@/components/PDFUploader';
 import SidebarControls from '@/components/SidebarControls';
 import KaraokeDisplay from '@/components/KaraokeDisplay';
@@ -20,6 +20,7 @@ export default function Home() {
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
   const [libraryBooks, setLibraryBooks] = useState<LibraryBookMetadata[]>([]);
   const reader = useVocalReader(document);
+  const { userId } = useAuth();
 
   // Load library metadata on mount
   const refreshLibrary = () => {
@@ -88,14 +89,13 @@ export default function Home() {
               }`}
             >
               <div className="absolute top-6 right-6 z-50">
-                <SignedOut>
+                {!userId ? (
                   <SignInButton mode="modal">
                     <button className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold rounded-full shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform">
                       Sign In
                     </button>
                   </SignInButton>
-                </SignedOut>
-                <SignedIn>
+                ) : (
                   <UserButton 
                     appearance={{
                       elements: {
@@ -103,7 +103,7 @@ export default function Home() {
                       }
                     }}
                   />
-                </SignedIn>
+                )}
               </div>
 
               {/* Background glowing gradient orbs */}

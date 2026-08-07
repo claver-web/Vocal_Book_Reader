@@ -32,3 +32,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch meaning' }, { status: 500 });
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const words = await prisma.savedWord.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return NextResponse.json({ words });
+  } catch (error) {
+    console.error('Dictionary API Error:', error);
+    return NextResponse.json({ error: 'Failed to fetch words' }, { status: 500 });
+  }
+}

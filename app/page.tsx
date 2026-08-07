@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, BookOpen, Layers, Volume2, Gauge, Zap, ArrowRight, SlidersHorizontal, Play, Pause, Rewind, FastForward } from 'lucide-react';
-import { SignInButton, UserButton, useAuth } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import PDFUploader from '@/components/PDFUploader';
 import SidebarControls from '@/components/SidebarControls';
 import KaraokeDisplay from '@/components/KaraokeDisplay';
 import SplashScreen from '@/components/SplashScreen';
 import LibraryGrid from '@/components/LibraryGrid';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import Navbar from '@/components/Navbar';
 import { useVocalReader } from '@/hooks/useVocalReader';
 import { PDFDocumentData } from '@/types';
 import { getLibraryMetadata, loadBookFromLibrary, removeBookFromLibrary, LibraryBookMetadata } from '@/lib/storage';
@@ -119,6 +120,8 @@ export default function Home() {
         reader.highContrast ? 'bg-black' : 'bg-[#050b14]'
       }`}
     >
+      <Navbar />
+
       <AnimatePresence mode="wait">
         {showSplash && <SplashScreen key="splash" />}
       </AnimatePresence>
@@ -137,24 +140,6 @@ export default function Home() {
                 reader.highContrast ? 'bg-black text-white' : 'bg-gradient-to-br from-[#050b14] via-[#081120] to-[#050b14]'
               }`}
             >
-              <div className="absolute top-6 right-6 z-50">
-                {!userId ? (
-                  <SignInButton mode="modal">
-                    <button className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold rounded-full shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform">
-                      Sign In
-                    </button>
-                  </SignInButton>
-                ) : (
-                  <UserButton 
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-10 h-10 border-2 border-amber-500 shadow-lg"
-                      }
-                    }}
-                  />
-                )}
-              </div>
-
               {/* Background glowing gradient orbs */}
               {!reader.highContrast && (
                 <>

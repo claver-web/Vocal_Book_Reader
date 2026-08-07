@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Bookmark, Volume2, ArrowRight, Layers } from 'lucide-react';
 import { FontFamilyOption } from '@/hooks/useVocalReader';
@@ -19,7 +19,7 @@ interface KaraokeDisplayProps {
   totalPages: number;
 }
 
-const KaraokeDisplay: React.FC<KaraokeDisplayProps> = React.memo(({
+const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
   sentences,
   currentSentenceIndex,
   currentWordIndex,
@@ -42,6 +42,36 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = React.memo(({
         return 'text-lg sm:text-xl md:text-2xl leading-loose';
       case 'xl':
         return 'text-xl sm:text-2xl md:text-3xl leading-loose';
+    }
+  };
+
+  const [dictionaryPopup, setDictionaryPopup] = useState<{ word: string, meaning: string | null, loading: boolean, x: number, y: number } | null>(null);
+
+  const handleWordClick = async (e: React.MouseEvent, rawWord: string) => {
+    e.stopPropagation(); // prevent sentence click
+    const word = rawWord.replace(/[^\w\s']/g, ''); // strip punctuation
+    if (!word) return;
+
+    // Show popup immediately as loading
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setDictionaryPopup({
+      word,
+      meaning: null,
+      loading: true,
+      x: rect.left,
+      y: rect.top - 10,
+    });
+
+    try {
+      const res = await fetch('/api/dictionary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word })
+      });
+      const data = await res.json();
+      setDictionaryPopup(prev => prev && prev.word === word ? { ...prev, meaning: data.meaning, loading: false } : prev);
+    } catch (err) {
+      setDictionaryPopup(prev => prev && prev.word === word ? { ...prev, meaning: "Error fetching meaning", loading: false } : prev);
     }
   };
 
@@ -163,13 +193,50 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = React.memo(({
                       : 'text-slate-400 font-normal opacity-70 hover:opacity-90'
                   }`}
                 >
-                  <p className="leading-relaxed">{sentence}</p>
+                  <p className="leading-relaxed">
+                    {sentence.split(' ').map((word, wIdx) => {
+                      const isCurrentWord = isActive && wIdx === currentWordIndex;
+                      return (
+                        <span 
+                          key={wIdx} 
+                          onClick={(e) => handleWordClick(e, word)}
+                          className={`cursor-pointer transition-colors duration-200 inline-block px-0.5 rounded ${
+                            isCurrentWord 
+                              ? (highContrast ? 'bg-yellow-300 text-black' : 'bg-amber-400 text-slate-900') 
+                              : 'hover:text-amber-400'
+                          }`}
+                        >
+                          {word}{' '}
+                        </span>
+                      );
+                    })}
+                  </p>
                 </div>
               );
             })}
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Dictionary Popup Overlay */}
+      {dictionaryPopup && (
+        <div 
+          className="fixed z-50 p-4 rounded-xl shadow-2xl border bg-[#0a1324] border-amber-500/40 text-white min-w-[200px]"
+          style={{ top: Math.max(10, dictionaryPopup.y - 80), left: Math.max(10, dictionaryPopup.x - 100) }}
+        >
+          <div className="flex justify-between items-start mb-2">
+            <h4 className="font-bold text-amber-400 capitalize">{dictionaryPopup.word}</h4>
+            <button onClick={() => setDictionaryPopup(null)} className="text-slate-400 hover:text-white text-xs px-1 rounded bg-slate-800">×</button>
+          </div>
+          {dictionaryPopup.loading ? (
+            <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <Sparkles className="w-4 h-4 animate-spin text-amber-400" /> Translating to Hindi...
+            </div>
+          ) : (
+            <p className="text-sm font-medium">{dictionaryPopup.meaning}</p>
+          )}
+        </div>
+      )}
 
       {/* Bottom context indicator */}
       <div
@@ -181,7 +248,7 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = React.memo(({
       </div>
     </div>
   );
-});
+};
 
 KaraokeDisplay.displayName = 'KaraokeDisplay';
 export default KaraokeDisplay;

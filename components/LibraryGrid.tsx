@@ -11,7 +11,7 @@ interface LibraryGridProps {
   onRemove: (name: string) => void;
 }
 
-const LibraryGrid: React.FC<LibraryGridProps> = React.memo(({ books, onResume, onRemove }) => {
+const LibraryGrid: React.FC<LibraryGridProps> = ({ books, onResume, onRemove }) => {
   if (books.length === 0) {
     return (
       <div className="w-full max-w-4xl mx-auto p-4 sm:p-6">
@@ -156,7 +156,7 @@ const LibraryGrid: React.FC<LibraryGridProps> = React.memo(({ books, onResume, o
       </div>
     </div>
   );
-});
+};
 
 LibraryGrid.displayName = 'LibraryGrid';
 export default LibraryGrid;

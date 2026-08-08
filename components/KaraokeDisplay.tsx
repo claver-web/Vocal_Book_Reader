@@ -45,7 +45,16 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
     }
   };
 
-  const [dictionaryPopup, setDictionaryPopup] = useState<{ word: string, meaning: string | null, loading: boolean, x: number, y: number } | null>(null);
+  const [dictionaryPopup, setDictionaryPopup] = useState<{ 
+    word: string, 
+    meaning: string | null, 
+    hin: string | null,
+    exampleEng: string | null,
+    exampleHin: string | null,
+    loading: boolean, 
+    x: number, 
+    y: number 
+  } | null>(null);
 
   const handleWordClick = async (e: React.MouseEvent, rawWord: string) => {
     e.stopPropagation(); // prevent sentence click
@@ -57,6 +66,9 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
     setDictionaryPopup({
       word,
       meaning: null,
+      hin: null,
+      exampleEng: null,
+      exampleHin: null,
       loading: true,
       x: rect.left,
       y: rect.top - 10,
@@ -69,7 +81,14 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
         body: JSON.stringify({ word })
       });
       const data = await res.json();
-      setDictionaryPopup(prev => prev && prev.word === word ? { ...prev, meaning: data.meaning, loading: false } : prev);
+      setDictionaryPopup(prev => prev && prev.word === word ? { 
+        ...prev, 
+        meaning: data.meaning, 
+        hin: data.hin,
+        exampleEng: data.exampleEng,
+        exampleHin: data.exampleHin,
+        loading: false 
+      } : prev);
     } catch (err) {
       setDictionaryPopup(prev => prev && prev.word === word ? { ...prev, meaning: "Error fetching meaning", loading: false } : prev);
     }
@@ -221,19 +240,33 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
       {/* Dictionary Popup Overlay */}
       {dictionaryPopup && (
         <div 
-          className="fixed z-50 p-4 rounded-xl shadow-2xl border bg-[#0a1324] border-amber-500/40 text-white min-w-[200px]"
-          style={{ top: Math.max(10, dictionaryPopup.y - 80), left: Math.max(10, dictionaryPopup.x - 100) }}
+          className="fixed z-50 p-4 rounded-xl shadow-2xl border bg-[#0a1324] border-amber-500/40 text-white min-w-[250px] max-w-[320px]"
+          style={{ top: Math.max(10, dictionaryPopup.y - 120), left: Math.max(10, dictionaryPopup.x - 100) }}
         >
           <div className="flex justify-between items-start mb-2">
-            <h4 className="font-bold text-amber-400 capitalize">{dictionaryPopup.word}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-bold text-amber-400 capitalize">{dictionaryPopup.word}</h4>
+              {!dictionaryPopup.loading && dictionaryPopup.hin && (
+                <span className="text-xs font-medium text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{dictionaryPopup.hin}</span>
+              )}
+            </div>
             <button onClick={() => setDictionaryPopup(null)} className="text-slate-400 hover:text-white text-xs px-1 rounded bg-slate-800">×</button>
           </div>
+          
           {dictionaryPopup.loading ? (
             <div className="flex items-center gap-2 text-slate-400 text-sm">
-              <Sparkles className="w-4 h-4 animate-spin text-amber-400" /> Translating to Hindi...
+              <Sparkles className="w-4 h-4 animate-spin text-amber-400" /> Defining with AI...
             </div>
           ) : (
-            <p className="text-sm font-medium">{dictionaryPopup.meaning}</p>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-200">{dictionaryPopup.meaning}</p>
+              {(dictionaryPopup.exampleEng || dictionaryPopup.exampleHin) && (
+                <div className="pt-2 border-t border-slate-700/50 space-y-1">
+                  {dictionaryPopup.exampleEng && <p className="text-xs italic text-slate-400">"{dictionaryPopup.exampleEng}"</p>}
+                  {dictionaryPopup.exampleHin && <p className="text-xs text-amber-200/70">"{dictionaryPopup.exampleHin}"</p>}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

@@ -11,22 +11,74 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Word is required' }, { status: 400 });
     }
 
-    // Placeholder translation
-    // Later, you can connect an actual API like Google Translate or a Dictionary API here
-    const hindiMeaning = `${word} का अर्थ (Placeholder)`; 
+    const cleanWord = word.toLowerCase().trim();
+
+    // Call Gemini API
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    
+    const prompt = `You are a dictionary API. Define the English word: "${cleanWord}".
+Provide the response as a pure, raw JSON object (without markdown blocks) with exactly these 4 string keys:
+"hin": The direct translation of the word in Hindi.
+"meaning": A short, clear meaning of the word in English.
+"exampleEng": A short example sentence using the word in English.
+"exampleHin": The same example sentence translated into Hindi.`;
+
+    const geminiRes = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json"
+        }
+      })
+    });
+
+    if (!geminiRes.ok) {
+      throw new Error('Failed to fetch from Gemini');
+    }
+
+    const data = await geminiRes.json();
+    const textResp = data.candidates[0].content.parts[0].text;
+    const parsed = JSON.parse(textResp);
+
+    const { hin, meaning, exampleEng, exampleHin } = parsed;
 
     // If user is logged in, save the word to their account
     if (userId) {
-      await prisma.savedWord.create({
-        data: {
-          word: word.toLowerCase(),
-          meaning: hindiMeaning,
+      await prisma.savedWord.upsert({
+        where: {
+          userId_word: {
+            userId,
+            word: cleanWord
+          }
+        },
+        update: {
+          meaning,
+          hin,
+          exampleEng,
+          exampleHin,
+          createdAt: new Date()
+        },
+        create: {
+          word: cleanWord,
+          meaning,
+          hin,
+          exampleEng,
+          exampleHin,
           userId,
         }
       });
     }
 
-    return NextResponse.json({ word, meaning: hindiMeaning });
+    return NextResponse.json({ 
+      word: cleanWord, 
+      meaning, 
+      hin, 
+      exampleEng, 
+      exampleHin 
+    });
   } catch (error) {
     console.error('Dictionary API Error:', error);
     return NextResponse.json({ error: 'Failed to fetch meaning' }, { status: 500 });

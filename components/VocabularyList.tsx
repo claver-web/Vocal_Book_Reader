@@ -8,6 +8,9 @@ interface SavedWord {
   id: string;
   word: string;
   meaning: string;
+  hin: string;
+  exampleEng: string;
+  exampleHin: string;
   createdAt: string;
 }
 
@@ -94,12 +97,22 @@ export default function VocabularyList({ isOpen, onClose }: VocabularyListProps)
                       className="p-4 rounded-2xl bg-[#0d182e] border border-slate-800 hover:border-amber-500/30 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-lg font-bold text-amber-400 capitalize">{item.word}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-amber-400 capitalize">{item.word}</h3>
+                          <span className="text-sm font-medium text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">{item.hin}</span>
+                        </div>
                         <span className="text-[10px] text-slate-500 font-mono">
                           {new Date(item.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className="text-slate-300 text-sm leading-relaxed">{item.meaning}</p>
+                      <p className="text-slate-300 text-sm leading-relaxed mb-3">{item.meaning}</p>
+                      
+                      {(item.exampleEng || item.exampleHin) && (
+                        <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-1">
+                          <p className="text-xs text-slate-400 italic">"{item.exampleEng}"</p>
+                          <p className="text-xs text-amber-200/70">"{item.exampleHin}"</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

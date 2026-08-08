@@ -8,14 +8,15 @@ datasource db {
 }
 
 model SavedWord {
-  id          String   @id @default(cuid())
-  word        String
-  meaning     String
-  hin         String   @default("")
-  exampleEng  String   @default("")
-  exampleHin  String   @default("")
-  userId      String
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  word          String
+  pronunciation String   @default("")
+  meaning       String
+  hin           String   @default("")
+  exampleEng    String   @default("")
+  exampleHin    String   @default("")
+  userId        String
+  createdAt     DateTime @default(now())
 
   @@unique([userId, word])
 }

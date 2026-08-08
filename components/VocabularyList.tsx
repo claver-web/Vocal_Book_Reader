@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookA, X, Loader2 } from 'lucide-react';
+import { BookA, X, Loader2, Volume2 } from 'lucide-react';
 
 interface SavedWord {
   id: string;
   word: string;
+  pronunciation: string;
   meaning: string;
   hin: string;
   exampleEng: string;
@@ -41,6 +42,15 @@ export default function VocabularyList({ isOpen, onClose }: VocabularyListProps)
       console.error('Failed to fetch words', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const playAudio = (text: string) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
     }
   };
 
@@ -98,7 +108,19 @@ export default function VocabularyList({ isOpen, onClose }: VocabularyListProps)
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-bold text-amber-400 capitalize">{item.word}</h3>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="text-lg font-bold text-amber-400 capitalize">{item.word}</h3>
+                            <button 
+                              onClick={() => playAudio(item.word)}
+                              className="text-slate-400 hover:text-amber-400 transition-colors p-1"
+                              title="Listen to pronunciation"
+                            >
+                              <Volume2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          {item.pronunciation && (
+                            <span className="text-xs text-slate-400 font-mono tracking-wide">{item.pronunciation}</span>
+                          )}
                           <span className="text-sm font-medium text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">{item.hin}</span>
                         </div>
                         <span className="text-[10px] text-slate-500 font-mono">

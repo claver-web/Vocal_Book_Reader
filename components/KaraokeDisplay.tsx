@@ -47,6 +47,7 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
 
   const [dictionaryPopup, setDictionaryPopup] = useState<{ 
     word: string, 
+    pronunciation: string | null,
     meaning: string | null, 
     hin: string | null,
     exampleEng: string | null,
@@ -65,6 +66,7 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     setDictionaryPopup({
       word,
+      pronunciation: null,
       meaning: null,
       hin: null,
       exampleEng: null,
@@ -83,6 +85,7 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
       const data = await res.json();
       setDictionaryPopup(prev => prev && prev.word === word ? { 
         ...prev, 
+        pronunciation: data.pronunciation,
         meaning: data.meaning, 
         hin: data.hin,
         exampleEng: data.exampleEng,
@@ -91,6 +94,16 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
       } : prev);
     } catch (err) {
       setDictionaryPopup(prev => prev && prev.word === word ? { ...prev, meaning: "Error fetching meaning", loading: false } : prev);
+    }
+  };
+
+  const playWordAudio = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
     }
   };
 
@@ -244,10 +257,22 @@ const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
           style={{ top: Math.max(10, dictionaryPopup.y - 120), left: Math.max(10, dictionaryPopup.x - 100) }}
         >
           <div className="flex justify-between items-start mb-2">
-            <div className="flex items-center gap-2">
-              <h4 className="font-bold text-amber-400 capitalize">{dictionaryPopup.word}</h4>
-              {!dictionaryPopup.loading && dictionaryPopup.hin && (
-                <span className="text-xs font-medium text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{dictionaryPopup.hin}</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-amber-400 capitalize">{dictionaryPopup.word}</h4>
+                <button 
+                  onClick={(e) => playWordAudio(e, dictionaryPopup.word)}
+                  className="text-slate-400 hover:text-amber-400 transition-colors"
+                  title="Listen"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                </button>
+                {!dictionaryPopup.loading && dictionaryPopup.hin && (
+                  <span className="text-xs font-medium text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{dictionaryPopup.hin}</span>
+                )}
+              </div>
+              {!dictionaryPopup.loading && dictionaryPopup.pronunciation && (
+                <span className="text-[11px] text-slate-400 font-mono tracking-wide">{dictionaryPopup.pronunciation}</span>
               )}
             </div>
             <button onClick={() => setDictionaryPopup(null)} className="text-slate-400 hover:text-white text-xs px-1 rounded bg-slate-800">×</button>

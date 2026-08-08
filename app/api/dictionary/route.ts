@@ -17,7 +17,8 @@ export async function POST(request: Request) {
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
     
     const prompt = `You are a dictionary API. Define the English word: "${cleanWord}".
-Provide the response as a pure, raw JSON object (without markdown blocks) with exactly these 4 string keys:
+Provide the response as a pure, raw JSON object (without markdown blocks) with exactly these 5 string keys:
+"pronunciation": The phonetic spelling of the word (e.g. /wɜːrd/).
 "hin": The direct translation of the word in Hindi.
 "meaning": A short, clear meaning of the word in English.
 "exampleEng": A short example sentence using the word in English.
@@ -43,7 +44,7 @@ Provide the response as a pure, raw JSON object (without markdown blocks) with e
     const textResp = data.candidates[0].content.parts[0].text;
     const parsed = JSON.parse(textResp);
 
-    const { hin, meaning, exampleEng, exampleHin } = parsed;
+    const { pronunciation, hin, meaning, exampleEng, exampleHin } = parsed;
 
     // If user is logged in, save the word to their account
     if (userId) {
@@ -55,6 +56,7 @@ Provide the response as a pure, raw JSON object (without markdown blocks) with e
           }
         },
         update: {
+          pronunciation,
           meaning,
           hin,
           exampleEng,
@@ -63,6 +65,7 @@ Provide the response as a pure, raw JSON object (without markdown blocks) with e
         },
         create: {
           word: cleanWord,
+          pronunciation,
           meaning,
           hin,
           exampleEng,
@@ -74,6 +77,7 @@ Provide the response as a pure, raw JSON object (without markdown blocks) with e
 
     return NextResponse.json({ 
       word: cleanWord, 
+      pronunciation,
       meaning, 
       hin, 
       exampleEng, 
